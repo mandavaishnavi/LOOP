@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LOOP — executive-function assistant</title>
+<style>
+  :root{
+    --bg:#0f1417; --panel:#161d21; --panel2:#1d262b; --line:#2a363c;
+    --ink:#e8eef1; --mut:#93a3ab; --accent:#2ea7a0; --accent2:#1f7d78;
+    --warn:#e0a03a; --danger:#e0605a; --ok:#4bb37a; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  header{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(15,20,23,.92);backdrop-filter:blur(6px);z-index:20}
+  .logo{font-weight:700;font-size:20px;letter-spacing:.5px;color:var(--accent)}
+  nav{display:flex;gap:6px}
+  nav button{background:transparent;border:1px solid transparent;color:var(--mut);padding:7px 13px;border-radius:9px;cursor:pointer;font-size:14px}
+  nav button.active{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+  nav button:hover{color:var(--ink)}
+  .spacer{flex:1}
+  .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);padding:4px 10px;border-radius:20px}
+  main{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
+  h2{margin:0 0 4px;font-size:20px}
+  h3{margin:22px 0 8px;font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .grid{display:grid;gap:16px}
+  .cols-2{grid-template-columns:1.15fr .85fr}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:820px){.cols-2,.cols-3{grid-template-columns:1fr}}
+  button.btn{background:var(--accent2);color:#fff;border:none;padding:9px 15px;border-radius:9px;cursor:pointer;font-size:14px;font-weight:600}
+  button.btn:hover{background:var(--accent)}
+  button.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
+  button.btn.ghost:hover{border-color:var(--accent)}
+  button.btn.small{padding:5px 10px;font-size:13px}
+  textarea,input,select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:14px}
+  textarea{min-height:110px;resize:vertical}
+  label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--mut)}
+  .chip.t{color:#7fc7ff;border-color:#2b4a5e}
+  .chip.a{color:#c9a2ff;border-color:#4a3a63}
+  .status{font-size:12px;padding:3px 9px;border-radius:20px}
+  .s-not_started{background:#2a333a;color:#a9b8c0}
+  .s-in_progress{background:#1f3d4d;color:#79c8ef}
+  .s-waiting{background:#453a1f;color:#e0bb6a}
+  .s-completed{background:#1e3d2c;color:#7fd6a2}
+  .overdue{color:var(--danger)}
+  .item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);cursor:pointer;margin-bottom:8px}
+  .item:hover{border-color:var(--accent2)}
+  .item .ti{font-weight:600;display:flex;justify-content:space-between;gap:8px}
+  .item .meta{color:var(--mut);font-size:12.5px;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  @media(max-width:820px){.week{grid-template-columns:repeat(2,1fr)}}
+  .day{border:1px solid var(--line);border-radius:10px;min-height:120px;padding:8px;background:var(--panel)}
+  .day h4{margin:0 0 6px;font-size:12.5px;color:var(--mut);font-weight:600}
+  .day h4.today{color:var(--accent)}
+  .mini{font-size:12px;background:var(--panel2);border-left:3px solid var(--accent2);border-radius:6px;padding:5px 7px;margin-bottom:5px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mini.appt{border-left-color:#9a6bff}
+  .mini.done{opacity:.5;text-decoration:line-through}
+  .empty{color:var(--mut);font-size:13px;font-style:italic}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+  .modal.open{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:640px;padding:20px}
+  .rm{border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:var(--panel2);font-size:13px}
+  .rm .row{justify-content:space-between}
+  .rm .sched{color:var(--mut);font-size:12px;margin-top:3px}
+  .builder{border:1px dashed var(--accent2);border-radius:10px;padding:12px;margin-top:12px;background:rgba(46,167,160,.06)}
+  .builder-title{font-size:12.5px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+  .log{font-size:12.5px;font-family:ui-monospace,monospace;color:var(--mut);max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg)}
+  .log div{padding:2px 0;border-bottom:1px dashed #223}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;z-index:99;pointer-events:none}
+  .toast.show{opacity:1}
+  .warnbox{background:#2a2313;border:1px solid #5a4a20;color:#e0bb6a;font-size:12.5px;padding:9px 12px;border-radius:9px;margin-top:10px}
+  .hint{color:var(--mut);font-size:12.5px;margin-top:6px}
+  .ext{border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--panel2)}
+  .ext .ti{font-weight:600}
+  .conf{font-size:11px;padding:2px 7px;border-radius:10px}
+  .c-explicit{background:#1e3d2c;color:#7fd6a2}
+  .c-inferred{background:#453a1f;color:#e0bb6a}
+  .c-missing{background:#4a2626;color:#e6908b}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;font-size:13.5px}
+  .kv div:nth-child(odd){color:var(--mut)}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tabs button{background:var(--panel2);border:1px solid var(--line);color:var(--mut);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  .tabs button.active{color:var(--ink);border-color:var(--accent2)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">LOOP</div>
+  <nav>
+    <button data-view="home" class="active">Home</button>
+    <button data-view="calendar">Calendar</button>
+    <button data-view="inbox">Inbox</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="pill" id="notifPill">notifications: unknown</span>
+</header>
+<main id="app"></main>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   LOOP — 40-minute working prototype
+   Scope: capture + extraction, calendar, reminders, delivery,
+   persistence. Backend/DB/web-push intentionally cut; see notes.
+   ============================================================ */
+
+const LS = 'loop_db_v1';
+const PRESETS = [['At time',0],['10 minutes before',-10],['1 hour before',-60],['1 day before',-1440]];
+const uid = () => Math.random().toString(36).slice(2,10);
+
+const DEFAULT_DB = () => ({
+  items: [],        // {id,type:'task'|'appointment',title,desc,status,start,deadline,durationMin,location,link,notes,source,createdAt}
+  captures: [],     // {id,text,createdAt,extractionStatus,extracted:[]}
+  reminders: [],    // {id,itemId,offsetMinutes,method,enabled,status,scheduledTime,snoozeMinutes}
+  deliveries: [],   // {id,reminderId,status,sentAt,note}
+  settings: { speaker:'priya', lang:'en-IN', notifAsked:false }
+});
+
+let DB = load();
+function load(){ try{ const d = JSON.parse(localStorage.getItem(LS)); return d && d.items ? Object.assign(DEFAULT_DB(), d) : DEFAULT_DB(); }catch(e){ return DEFAULT_DB(); } }
+function save(){ try{ localStorage.setItem(LS, JSON.stringify(DB)); }catch(e){ /* storage blocked (e.g. file://) — keep in memory */ } }
+
+/* ---------- small helpers ---------- */
+const $ = (s)=>document.querySelector(s);
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function fmt(ts){ if(ts==null) return '—'; return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(ts){ if(ts==null) return '—'; return new Date(ts).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function todayISO(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function itemById(id){ return DB.items.find(i=>i.id===id); }
+function remsFor(id){ return DB.reminders.filter(r=>r.itemId===id); }
+function anchorOf(it){ return it.type==='appointment' ? it.start : (it.start!=null? it.start : it.deadline); }
+function isOverdue(it){ const a=it.deadline!=null?it.deadline:it.start; return it.status!=='completed' && a!=null && a<Date.now(); }
+
+/* ============================================================
+   SARVAM API INTEGRATION
+   Extraction: sarvam-105b   Voice: bulbul:v3 (see server.js)
+   ============================================================ */
+/* All Sarvam calls go through our own server (see server.js):
+   Sarvam sends no CORS headers, and the key must stay server-side. */
+const API = { extract:'/api/extract', tts:'/api/tts' };
+let API_READY = false;
+
+async function probeApi(){
+  try{
+    const r = await fetch(API.extract, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text:'' }) });
+    API_READY = (r.status === 400 || r.ok); // 400 'empty text' still proves the server is up
+  }catch(e){ API_READY = false; }
+  render();
+}
+
+async function sarvamExtract(text){
+  const res = await fetch(API.extract, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text }) });
+  if(!res.ok){ let m='api-'+res.status; try{ m=(await res.json()).error||m; }catch(e){} throw new Error(m); }
+  const data = await res.json();
+  return (data.items||[]).map(normalizeExt);
+}
+
+function normalizeExt(x){
+  let d=null;
+  if(typeof x.date === 'number') d = x.date;
+  else if(x.date) d = Date.parse(x.date) || null;
+  return { type:(x.type||'task').toLowerCase(), title:(x.title||'').trim()||'Untitled',
+    description:x.description||'', date: d,
+    date_confidence: x.date_confidence || (d?'explicit':'missing'),
+    ambiguity_note: x.ambiguity_note||'' };
+}
+
+/* Rule-based fallback so the demo works with no key / no network. */
+function ruleExtract(text){
+  const out=[]; const lines = text.split(/\n|(?<=[.;])\s+/).map(s=>s.trim()).filter(Boolean);
+  const now = new Date();
+  for(const ln of lines){
+    let t = ln.replace(/^[-*•\d.)\s]+/,'').trim();
+    if(t.length<3) continue;
+    const low = t.toLowerCase();
+    let date=null, conf='missing', note='';
+    if(/\btomorrow\b/.test(low)){ date = new Date(now.getTime()+864e5).setHours(17,0,0,0); conf='inferred'; }
+    else if(/\bnext week\b/.test(low)){ date=null; conf='inferred'; note='“next week” is vague — please confirm a date'; }
+    else if(/\btoday\b/.test(low)){ date = new Date(now).setHours(17,0,0,0); conf='inferred'; }
+    else { const m = low.match(/(?:on|by|due|before)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+      if(m){ const mon={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}[m[2]];
+        const d=new Date(now.getFullYear(),mon,+m[1],17,0,0,0); if(d<now) d.setFullYear(now.getFullYear()+1); date=d.getTime(); conf='explicit'; } }
+    const isAppt = /\b(meeting|call|appointment|class|lecture|interview|standup|sync)\b/.test(low);
+    let type = isAppt?'appointment':'task';
+    if(/^\s*(what|why|how|should|when|who|which)\b/i.test(t) || t.endsWith('?')) type='question';
+    if(/^\s*(decided|we decided|decision)\b/i.test(low)) type='decision';
+    out.push({ type, title:t.slice(0,90), description:t, date, date_confidence:conf, ambiguity_note:note });
+  }
+  return out.slice(0,12);
+}
+
+async function sarvamSpeak(text){
+  try{
+    const res = await fetch(API.tts, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, lang:DB.settings.lang, speaker:DB.settings.speaker }) });
+    if(!res.ok) return false;
+    const data = await res.json();
+    if(!data.audio) return false;
+    const a = new Audio('data:audio/wav;base64,'+data.audio); await a.play(); return true;
+  }catch(e){ return false; }
+}
+function browserSpeak(text){
+  try{ if('speechSynthesis' in window){ const u=new SpeechSynthesisUtterance(text); u.lang=DB.settings.lang; speechSynthesis.speak(u); return true; } }catch(e){}
+  return false;
+}
+
+/* ============================================================
+   REMINDER DELIVERY ENGINE (in-tab)
+   Fires while the page is open. A production build moves this to
+   a server scheduler + Web Push so it also fires when closed.
+   ============================================================ */
+function recomputeReminder(r){
+  const it = itemById(r.itemId); if(!it) return;
+  const anchor = anchorOf(it); if(anchor==null){ r.status='obsolete'; return; }
+  r.scheduledTime = anchor + r.offsetMinutes*60000;
+}
+function recomputeForItem(id){ remsFor(id).forEach(recomputeReminder); save(); }
+function cancelForItem(id){ remsFor(id).forEach(r=>{ if(r.status!=='delivered') r.status='cancelled'; }); save(); }
+
+async function deliver(rem){
+  const it = itemById(rem.itemId); if(!it) return;
+  const when = fmt(rem.scheduledTime);
+  const body = it.title + ' — ' + when;
+  let note=[];
+  if(rem.method==='push'||rem.method==='both'){
+    note.push('push:' + await notify('LOOP reminder: '+it.title, body, rem.id));
+  }
+  if(rem.method==='voice'||rem.method==='both'){
+    const spoke = await sarvamSpeak('Reminder. '+it.title);
+    if(spoke) note.push('voice:sarvam_tts');
+    else note.push(browserSpeak('Reminder. '+it.title)?'voice:browser_tts':'voice:unavailable');
+  }
+  DB.deliveries.unshift({ id:uid(), reminderId:rem.id, status: note.join(', '), sentAt:Date.now(), item:it.title });
+  rem.status='delivered';
+  save(); renderIfOpen();
+}
+/* Reliable notification. Prefer the service worker's showNotification(),
+   which works where new Notification() is blocked (e.g. Android Chrome
+   throws 'Illegal constructor'). Fall back to the constructor. Returns a
+   short status string so the delivery log shows what actually happened. */
+let SW_REG = null;
+async function initSW(){
+  if(!('serviceWorker' in navigator)) return;
+  try{ SW_REG = await navigator.serviceWorker.register('/sw.js'); }catch(e){ SW_REG = null; }
+}
+async function notify(title, body, tag){
+  if(!('Notification' in window)) return 'unsupported_here';
+  if(Notification.permission !== 'granted') return 'suppressed_no_permission';
+  if(SW_REG){
+    try{ await SW_REG.showNotification(title, { body, tag }); return 'sent_service_worker'; }
+    catch(e){ /* fall through */ }
+  }
+  try{ new Notification(title, { body, tag }); return 'sent_constructor'; }
+  catch(e){ return 'error:' + e.message; }
+}
+
+function tick(){
+  const now=Date.now(); let fired=false;
+  DB.reminders.forEach(r=>{ if(r.enabled && r.status==='scheduled' && r.scheduledTime!=null && r.scheduledTime<=now){ deliver(r); fired=true; } });
+  if(fired) save();
+}
+setInterval(tick, 15000);
+setTimeout(tick, 1500);
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+let view='home';
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ view=b.dataset.view; document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b)); render(); });
+function renderIfOpen(){ if($('#modal').classList.contains('open')) return; render(); }
+
+function render(){
+  const a=$('#app');
+  if(view==='home') a.innerHTML=viewHome();
+  else if(view==='calendar') a.innerHTML=viewCalendar();
+  else if(view==='inbox') a.innerHTML=viewInbox();
+  else a.innerHTML=viewSettings();
+  bind();
+  updatePill();
+}
+function updatePill(){
+  const p = ('Notification' in window) ? Notification.permission : 'unsupported';
+  $('#notifPill').textContent = 'notifications: '+p;
+}
+
+function itemCard(it){
+  const r=remsFor(it.id).filter(x=>x.enabled&&x.status==='scheduled');
+  const next = r.sort((x,y)=>x.scheduledTime-y.scheduledTime)[0];
+  const when = it.type==='appointment' ? fmt(it.start) : (it.start!=null?fmt(it.start):(it.deadline!=null?'due '+fmt(it.deadline):'unscheduled'));
+  return `<div class="item" data-open="${it.id}">
+    <div class="ti"><span>${esc(it.title)}</span>
+      <span><span class="chip ${it.type==='appointment'?'a':'t'}">${it.type}</span>
+      <span class="status s-${it.status}">${it.status.replace('_',' ')}</span></span></div>
+    <div class="meta"><span>${when}</span>
+      ${isOverdue(it)?'<span class="overdue">overdue</span>':''}
+      <span>${r.length} reminder${r.length!==1?'s':''}${next?' · next '+fmt(next.scheduledTime):''}</span>
+      ${it.source?'<span class="chip">from inbox</span>':''}</div>
+  </div>`;
+}
+
+function viewHome(){
+  const now=Date.now();
+  const upcoming = DB.items.filter(i=>i.status!=='completed' && anchorOf(i)!=null && anchorOf(i)>=now)
+    .sort((a,b)=>anchorOf(a)-anchorOf(b)).slice(0,6);
+  const overdue = DB.items.filter(isOverdue);
+  const pending = DB.items.filter(i=>i.status==='waiting');
+  const recent = DB.items.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);
+  const done = DB.items.filter(i=>i.status==='completed');
+  return `<h2>Home</h2><div class="sub">Your commitments at a glance.</div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3 style="margin-top:0">Quick capture</h3>
+      <textarea id="quick" placeholder="Dump anything — meeting notes, a commitment, a deadline…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="quickExtract">Extract &amp; review</button>
+        <button class="btn ghost" id="quickTask">Save as task</button>
+        <span class="hint">${API_READY?'Sarvam LLM extraction on (sarvam-105b)':'Rule-based extraction — run via server.js to enable the LLM'}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Delivery log</h3>
+      <div class="log">${DB.deliveries.length?DB.deliveries.slice(0,20).map(d=>`<div>${fmt(d.sentAt)} · ${esc(d.item||'')} → ${esc(d.status)}</div>`).join(''):'<div>No reminders delivered yet. Configure one and keep this tab open.</div>'}</div>
+    </div>
+  </div>
+  <div class="grid cols-3" style="margin-top:16px">
+    <div class="card"><h3 style="margin-top:0">Upcoming</h3>${upcoming.length?upcoming.map(itemCard).join(''):'<div class="empty">Nothing scheduled.</div>'}</div>
+    <div class="card"><h3 style="margin-top:0">Overdue</h3>${overdue.length?overdue.map(itemCard).join(''):'<div class="empty">Nothing overdue. Nice.</div>'}</div>
+    <div class="card"><h3 style="margin-top:0">Waiting / recent</h3>${(pending.concat(recent)).slice(0,6).map(itemCard).join('')||'<div class="empty">No items yet.</div>'}</div>
+  </div>
+  <div class="row" style="margin-top:16px"><span class="hint">${DB.items.length} items · ${DB.items.filter(i=>i.status==='completed').length} completed · ${DB.reminders.filter(r=>r.status==='scheduled'&&r.enabled).length} active reminders</span></div>`;
+}
+
+function viewCalendar(){
+  const start=new Date(); start.setHours(0,0,0,0);
+  const dow=(start.getDay()+6)%7; start.setDate(start.getDate()-dow); // Monday
+  const days=[...Array(7)].map((_,i)=>{ const d=new Date(start); d.setDate(start.getDate()+i); return d; });
+  const todayStr=new Date().toDateString();
+  return `<h2>Calendar</h2><div class="sub">Week view · click a day to add · click an item to open</div>
+  <div class="row" style="margin-bottom:12px">
+    <button class="btn" id="newAppt">+ Appointment</button>
+    <button class="btn ghost" id="newTask">+ Task</button>
+  </div>
+  <div class="week">
+    ${days.map(d=>{
+      const key=d.toDateString();
+      const its=DB.items.filter(i=>{ const a=anchorOf(i); return a!=null && new Date(a).toDateString()===key; })
+        .sort((a,b)=>anchorOf(a)-anchorOf(b));
+      return `<div class="day" data-day="${d.getTime()}">
+        <h4 class="${key===todayStr?'today':''}">${d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'})}</h4>
+        ${its.map(i=>`<div class="mini ${i.type==='appointment'?'appt':''} ${i.status==='completed'?'done':''}" data-open="${i.id}" title="${esc(i.title)}">${esc(i.title)}</div>`).join('')}
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Unscheduled &amp; due (no calendar slot)</h3>
+    ${DB.items.filter(i=>anchorOf(i)==null || (i.type==='task'&&i.start==null)).map(itemCard).join('')||'<div class="empty">None.</div>'}
+  </div>`;
+}
+
+function viewInbox(){
+  return `<h2>Inbox</h2><div class="sub">Capture → extract → review → approve.</div>
+  <div class="card">
+    <label>Paste notes or a brain dump</label>
+    <textarea id="capText" placeholder="e.g. Met advisor. I need to send the draft by Friday. Book the lab slot next week. Also: should I switch supervisors?"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="doExtract">Extract</button>
+      <span class="hint" id="extHint">${API_READY?'Uses Sarvam LLM':'Server not running — rule-based fallback'}</span>
+    </div>
+  </div>
+  <h3>Captures</h3>
+  ${DB.captures.length?DB.captures.slice().reverse().map(cap=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="row" style="justify-content:space-between">
+        <span class="chip">${fmt(cap.createdAt)} · ${cap.extractionStatus}</span>
+        <span class="hint">${cap.extracted.filter(e=>e.approved).length}/${cap.extracted.length} approved</span>
+      </div>
+      <div class="hint" style="margin:8px 0;white-space:pre-wrap">${esc(cap.text.slice(0,260))}${cap.text.length>260?'…':''}</div>
+      ${cap.extracted.map((e,ix)=>`
+        <div class="ext">
+          <div class="row" style="justify-content:space-between">
+            <span class="ti">${esc(e.title)}</span>
+            <span class="row">
+              <span class="chip ${e.type==='appointment'?'a':'t'}">${e.type}</span>
+              <span class="conf c-${e.date_confidence}">date: ${e.date_confidence}</span>
+            </span>
+          </div>
+          ${e.ambiguity_note?`<div class="warnbox">⚠ ${esc(e.ambiguity_note)}</div>`:''}
+          <div class="row" style="margin-top:8px">
+            <span class="hint">${e.date?fmt(e.date):'no date'}</span>
+            <span class="spacer" style="flex:1"></span>
+            ${e.approved?'<span class="chip">✓ added</span>':
+              `<button class="btn small" data-approve="${cap.id}:${ix}">Approve</button>
+               <button class="btn ghost small" data-reject="${cap.id}:${ix}">Reject</button>`}
+          </div>
+        </div>`).join('')}
+    </div>`).join(''):'<div class="empty">No captures yet.</div>'}`;
+}
+
+function viewSettings(){
+  const s=DB.settings;
+  return `<h2>Settings</h2><div class="sub">Prototype settings. Stored locally in your browser.</div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3 style="margin-top:0">Sarvam API</h3>
+      <div class="warnbox" style="margin-top:0">The API key lives on the server (SARVAM_API_KEY), never in the browser. Status: <b>${API_READY?'connected':'server not reachable'}</b>.</div>
+      <div class="hint">Extraction uses <b>sarvam-105b</b>; voice uses <b>bulbul:v3</b>. Both are proxied by server.js.</div>
+      <label>Voice speaker (bulbul:v3)</label>
+      <input id="speaker" value="${esc(s.speaker)}" />
+      <div class="hint">Valid v3 speakers include: priya, ritu, kavya, aditya, rahul, rohan.</div>
+      <label>Language code</label>
+      <input id="lang" value="${esc(s.lang)}" />
+      <div class="row" style="margin-top:12px"><button class="btn" id="saveSet">Save</button></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Delivery</h3>
+      <p class="hint">Notifications and spoken reminders are delivered while this tab is open. A production build adds a server scheduler + Web Push so they also fire when the app is closed.</p>
+      <div class="row"><button class="btn" id="askPerm">Enable notifications</button>
+      <button class="btn ghost" id="testNotif">Send test</button>
+      <button class="btn ghost" id="testVoice">Test voice</button></div>
+      <div class="warnbox">iOS note: web push only works for an installed PWA; spoken reminders need the page open.</div>
+      <h3>Data</h3>
+      <div class="row"><button class="btn ghost" id="export">Export JSON</button>
+      <button class="btn ghost" id="wipe">Reset all data</button></div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   DETAIL SHEET
+   ============================================================ */
+function openItem(id){
+  const it=itemById(id); if(!it) return;
+  const rems=remsFor(it.id);
+  const opts=PRESETS.map(p=>`<option value="${p[1]}">${p[0]}</option>`).join('');
+  $('#sheet').innerHTML = `
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">${esc(it.title)}</h2>
+      <button class="btn ghost small" id="closeSheet">Close</button>
+    </div>
+    <div class="row" style="margin:8px 0 4px">
+      <span class="chip ${it.type==='appointment'?'a':'t'}">${it.type}</span>
+      <span class="status s-${it.status}">${it.status.replace('_',' ')}</span>
+      ${isOverdue(it)?'<span class="overdue">overdue</span>':''}
+    </div>
+    <label>Title</label><input id="d_title" value="${esc(it.title)}" />
+    <label>Description / notes</label><textarea id="d_desc" style="min-height:70px">${esc(it.desc||'')}</textarea>
+    <div class="row">
+      <div style="flex:1"><label>${it.type==='appointment'?'Start':'Scheduled start'}</label>
+        <input id="d_start" type="datetime-local" value="${toLocalInput(it.start)}" /></div>
+      <div style="flex:1"><label>Deadline (optional)</label>
+        <input id="d_deadline" type="datetime-local" value="${toLocalInput(it.deadline)}" /></div>
+    </div>
+    <label>Status</label>
+    <select id="d_status">${['not_started','in_progress','waiting','completed'].map(s=>`<option value="${s}" ${s===it.status?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select>
+    ${it.location!==undefined?`<label>Location / link</label><input id="d_loc" value="${esc(it.location||it.link||'')}" />`:''}
+
+    <h3>Reminders</h3>
+    <div id="remList">
+      ${rems.length?rems.map(r=>`
+        <div class="rm">
+          <div class="row">
+            <span>${labelOffset(r.offsetMinutes)} · <b>${r.method}</b></span>
+            <span class="row">
+              <span class="status s-${r.status==='scheduled'?'in_progress':'completed'}">${r.status}</span>
+              <button class="btn ghost small" data-delrem="${r.id}">Remove</button>
+            </span>
+          </div>
+          <div class="sched">Scheduled: ${r.scheduledTime?fmt(r.scheduledTime):'— (needs a date on the item)'}</div>
+          <div class="row" style="margin-top:6px">
+            <select data-method="${r.id}">
+              <option value="push" ${r.method==='push'?'selected':''}>push</option>
+              <option value="voice" ${r.method==='voice'?'selected':''}>voice</option>
+              <option value="both" ${r.method==='both'?'selected':''}>both</option>
+            </select>
+            <label style="margin:0"><input type="checkbox" data-en="${r.id}" ${r.enabled?'checked':''} style="width:auto"> enabled</label>
+            ${r.status==='delivered'?'<span class="hint">delivered — snooze from the notification or re-add</span>':''}
+          </div>
+        </div>`).join(''):'<div class="empty">No reminders yet.</div>'}
+    </div>
+    <div class="builder">
+      <div class="builder-title">Add a reminder</div>
+      <div class="row">
+        <select id="newOffset" style="flex:1">${opts}</select>
+        <select id="newMethod" style="flex:1"><option value="push">push</option><option value="voice">voice</option><option value="both">both</option></select>
+        <button class="btn" id="addRem">Add reminder</button>
+      </div>
+      <div class="hint">Pick a time and a method, then click <b>Add reminder</b> to create it. (Choosing here and clicking <b>Save item</b> also creates it.)</div>
+    </div>
+    <div class="hint">Reminder times recalculate automatically when the item's date changes. Completing or deleting the item cancels its reminders.</div>
+
+    <div class="row" style="margin-top:18px">
+      <button class="btn" id="saveItem">Save item</button>
+      <button class="btn ghost" id="completeItem">Mark completed</button>
+      <button class="btn ghost" id="deleteItem" style="color:#e0605a">Delete</button>
+    </div>`;
+  $('#modal').classList.add('open');
+  bindSheet(it);
+}
+function toLocalInput(ts){ if(ts==null) return ''; const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+function labelOffset(m){ if(m===0) return 'At time'; if(m%1440===0) return (m/-1440)+' day(s) before'; if(m%60===0) return (m/-60)+' hour(s) before'; return (m/-1)+' min before'; }
+function addReminder(itemId, off, method){
+  if(remsFor(itemId).some(r=>r.offsetMinutes===off && r.method===method)) return false;
+  const r={id:uid(),itemId,offsetMinutes:off,method,enabled:true,status:'scheduled',scheduledTime:null};
+  recomputeReminder(r); DB.reminders.push(r); return true;
+}
+
+function bindSheet(it){
+  $('#closeSheet').onclick=()=>$('#modal').classList.remove('open');
+  $('#addRem').onclick=()=>{
+    const off=parseInt($('#newOffset').value,10), method=$('#newMethod').value;
+    if(!addReminder(it.id, off, method)){ toast('That reminder already exists'); return; }
+    save(); openItem(it.id); toast('Reminder added');
+  };
+  $('#saveItem').onclick=()=>{
+    // If the user picked a reminder in the builder but clicked Save instead of
+    // Add reminder, honour it rather than silently discarding their choice.
+    const off=parseInt($('#newOffset').value,10), method=$('#newMethod').value;
+    if(!(off===0 && method==='push')) addReminder(it.id, off, method);
+    it.title=$('#d_title').value.trim()||it.title;
+    it.desc=$('#d_desc').value;
+    const s=$('#d_start').value, dl=$('#d_deadline').value;
+    it.start = s? new Date(s).getTime(): null;
+    it.deadline = dl? new Date(dl).getTime(): null;
+    it.status=$('#d_status').value;
+    if($('#d_loc')) it.location=$('#d_loc').value;
+    recomputeForItem(it.id); save(); $('#modal').classList.remove('open'); render(); toast('Saved');
+  };
+  $('#completeItem').onclick=()=>{ it.status='completed'; cancelForItem(it.id); save(); $('#modal').classList.remove('open'); render(); toast('Completed — reminders cancelled'); };
+  $('#deleteItem').onclick=()=>{ if(!confirm('Delete this item and its reminders?')) return; cancelForItem(it.id); DB.items=DB.items.filter(x=>x.id!==it.id); save(); $('#modal').classList.remove('open'); render(); toast('Deleted'); };
+  $('#sheet').querySelectorAll('[data-delrem]').forEach(b=>b.onclick=()=>{ DB.reminders=DB.reminders.filter(r=>r.id!==b.dataset.delrem); save(); openItem(it.id); });
+  $('#sheet').querySelectorAll('[data-method]').forEach(s=>s.onchange=()=>{ const r=DB.reminders.find(x=>x.id===s.dataset.method); r.method=s.value; recomputeReminder(r); save(); openItem(it.id); });
+  $('#sheet').querySelectorAll('[data-en]').forEach(c=>c.onchange=()=>{ const r=DB.reminders.find(x=>x.id===c.dataset.en); r.enabled=c.checked; if(r.enabled&&r.status==='cancelled') r.status='scheduled'; save(); openItem(it.id); });
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+function bind(){
+  // open item from any card/mini
+  document.querySelectorAll('[data-open]').forEach(el=>el.onclick=(e)=>{ e.stopPropagation(); openItem(el.dataset.open); });
+  // day click -> new appointment on that day
+  document.querySelectorAll('[data-day]').forEach(el=>el.onclick=(e)=>{ if(e.target.dataset.open) return; newItem('appointment', +el.dataset.day + 10*3600e3); });
+
+  if(view==='home'){
+    $('#quickTask') && ($('#quickTask').onclick=()=>{ const t=$('#quick').value.trim(); if(!t) return; createItem({type:'task',title:t.slice(0,80),desc:t}); $('#quick').value=''; toast('Task saved'); });
+    $('#quickExtract') && ($('#quickExtract').onclick=()=>{ const t=$('#quick').value.trim(); if(!t) return; view='inbox'; document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.view==='inbox')); render(); $('#capText').value=t; doExtract(t); });
+  }
+  if(view==='calendar'){
+    $('#newAppt') && ($('#newAppt').onclick=()=>newItem('appointment', Date.now()+864e5));
+    $('#newTask') && ($('#newTask').onclick=()=>newItem('task', null));
+  }
+  if(view==='inbox'){
+    $('#doExtract') && ($('#doExtract').onclick=()=>doExtract($('#capText').value));
+    document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{ const [cid,ix]=b.dataset.approve.split(':'); approveExtract(cid,+ix); });
+    document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>{ const [cid,ix]=b.dataset.reject.split(':'); const cap=DB.captures.find(c=>c.id===cid); cap.extracted[ix].rejected=true; save(); render(); });
+  }
+  if(view==='settings'){
+    $('#saveSet') && ($('#saveSet').onclick=()=>{ DB.settings.speaker=$('#speaker').value.trim()||'priya'; DB.settings.lang=$('#lang').value.trim()||'en-IN'; save(); toast('Settings saved'); });
+    $('#askPerm') && ($('#askPerm').onclick=askPerm);
+    $('#testNotif') && ($('#testNotif').onclick=async()=>{ const r=await notify('LOOP test','Notifications are working.','test-'+Date.now()); toast('Push result: '+r); });
+    $('#testVoice') && ($('#testVoice').onclick=async()=>{ const ok=await sarvamSpeak('This is a LOOP voice reminder test.'); if(!ok) browserSpeak('This is a LOOP voice reminder test.'); toast(ok?'Sarvam TTS playing':'Browser speech playing'); });
+    $('#export') && ($('#export').onclick=()=>{ const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='loop-data.json'; a.click(); });
+    $('#wipe') && ($('#wipe').onclick=()=>{ if(confirm('Erase all LOOP data in this browser?')){ DB=DEFAULT_DB(); save(); render(); toast('Reset'); } });
+  }
+}
+function askPerm(){ if(!('Notification' in window)){ toast('Notifications unsupported here'); return; } Notification.requestPermission().then(p=>{ updatePill(); toast('Notifications: '+p); }); }
+
+function newItem(type, at){
+  const it={ id:uid(), type, title: type==='appointment'?'New appointment':'New task', desc:'',
+    status:'not_started', start: at!=null?at:null, deadline:null, durationMin: type==='appointment'?30:null,
+    location: type==='appointment'?'':'', notes:'', source:null, createdAt:Date.now() };
+  DB.items.push(it); save(); render(); openItem(it.id);
+}
+function createItem(p){ const it=Object.assign({ id:uid(),type:'task',title:'',desc:'',status:'not_started',start:null,deadline:null,durationMin:null,location:'',notes:'',source:null,createdAt:Date.now() }, p); DB.items.push(it); save(); render(); return it; }
+
+/* ---------- extraction + approval ---------- */
+async function doExtract(text){
+  text=(text||'').trim(); if(!text){ toast('Nothing to extract'); return; }
+  const hint=$('#extHint'); if(hint) hint.textContent='Extracting…';
+  let extracted=[], status='done';
+  try{ extracted = await sarvamExtract(text); if(hint) hint.textContent='Extracted with Sarvam LLM'; }
+  catch(e){ extracted = ruleExtract(text); status = API_READY?'fallback (api error)':'fallback (no server)'; if(hint) hint.textContent='Used rule-based fallback: '+e.message; }
+  if(!extracted.length) extracted = ruleExtract(text);
+  const cap={ id:uid(), text, createdAt:Date.now(), extractionStatus:status, extracted: extracted.map(e=>Object.assign({approved:false,rejected:false},e)) };
+  DB.captures.push(cap); save(); render(); toast(extracted.length+' item(s) extracted');
+}
+function approveExtract(cid, ix){
+  const cap=DB.captures.find(c=>c.id===cid); const e=cap.extracted[ix];
+  const isAppt = e.type==='appointment';
+  const it = createItem({ type:isAppt?'appointment':'task', title:e.title, desc:e.description,
+    status:'not_started', start: isAppt? (e.date||null) : (e.date||null), deadline: !isAppt&&e.date? e.date:null,
+    source:cid, location:isAppt?'':'' });
+  e.approved=true; save(); toast('Added: '+e.title);
+}
+
+/* ---------- boot ---------- */
+render();
+probeApi();
+initSW();
+if(!DB.settings.notifAsked && 'Notification' in window && Notification.permission==='default'){
+  DB.settings.notifAsked=true; save();
+}
+</script>
+</body>
+</html>
